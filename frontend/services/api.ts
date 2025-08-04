@@ -12,8 +12,7 @@ import {
 import * as SecureStore from 'expo-secure-store';
 
 // Create axios instance with base URL and default headers
-const API_BASE_URL =
-  process.env.API_BASE_URL || 'https://sanitaryshop-backend-2.onrender.com';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://172.16.214.181:3000/';
 
 console.log(API_BASE_URL, 'this is the baseurl');
 
