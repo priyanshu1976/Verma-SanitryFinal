@@ -25,6 +25,8 @@
   },
   "homepage": "https://github.com/bhatiatanish225/SanitaryShop-Backend#readme",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.859.0",
+    "@aws-sdk/s3-request-presigner": "^3.859.0",
     "@prisma/client": "^6.10.1",
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.7.0",

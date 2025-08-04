@@ -143,3 +143,23 @@ createdAt DateTime @default(now())
 
 Cart Cart[]
 }
+
+model Excel {
+id Int @id @default(autoincrement())
+itemCode String @unique
+itemDescription String
+brandGroup String
+stock Int
+sdp Float
+nrp Float
+mrp Float
+hsn String
+sgst Float
+cgst Float
+igst Float
+cess Float
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@map("excel")
+}
