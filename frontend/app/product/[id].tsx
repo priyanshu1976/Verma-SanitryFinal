@@ -8,10 +8,22 @@ import {
   Image,
   Alert,
   Dimensions,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Star, Minus, Plus, ShoppingCart, Heart, Share2, Shield, Truck, RotateCcw } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Star,
+  Minus,
+  Plus,
+  ShoppingCart,
+  Heart,
+  Share2,
+  Shield,
+  Truck,
+  RotateCcw,
+} from 'lucide-react-native';
 import { useCart } from '@/contexts/CartContext';
 import { productService } from '@/services/api';
 import { Product } from '@/types/api';
@@ -49,6 +61,20 @@ export default function ProductDetailScreen() {
     }
   };
 
+  // Helper: get images array from product
+  const getProductImages = (product: Product) => {
+    if (!product) return [];
+    // If product.images exists and is an array and has at least one image, use it
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      return product.images;
+    }
+    // Otherwise, fallback to image_url if present
+    if (product.image_url) {
+      return [product.image_url];
+    }
+    return [];
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -75,17 +101,22 @@ export default function ProductDetailScreen() {
     );
   }
 
+  const images = getProductImages(product);
+
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
       addToCart({
         id: product.id,
         name: product.name,
         price: product.price,
-        image_url: product.image_url,
-        maxQuantity: product.stock_quantity
+        image_url: images[0], // Use first image for cart
+        maxQuantity: product.stock_quantity,
       });
     }
-    Alert.alert('Added to Cart', `${product.name} has been added to your cart.`);
+    Alert.alert(
+      'Added to Cart',
+      `${product.name} has been added to your cart.`
+    );
   };
 
   const increaseQuantity = () => {
@@ -100,8 +131,11 @@ export default function ProductDetailScreen() {
     }
   };
 
-  const discountPercentage = product.original_price 
-    ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
+  const discountPercentage = product.original_price
+    ? Math.round(
+        ((product.original_price - product.price) / product.original_price) *
+          100
+      )
     : 0;
 
   return (
@@ -116,10 +150,10 @@ export default function ProductDetailScreen() {
             <ArrowLeft size={24} color="#2e3f47" />
           </TouchableOpacity>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.headerButton}>
+            {/* <TouchableOpacity style={styles.headerButton}>
               <Share2 size={20} color="#2e3f47" />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </TouchableOpacity> */}
+            {/* <TouchableOpacity
               style={[styles.headerButton, isFavorite && styles.favoriteActive]}
               onPress={() => setIsFavorite(!isFavorite)}
             >
@@ -128,13 +162,63 @@ export default function ProductDetailScreen() {
                 color={isFavorite ? "#ffffff" : "#2e3f47"}
                 fill={isFavorite ? "#ffffff" : "none"}
               />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </View>
 
         {/* Product Images */}
         <View style={styles.imageContainer}>
-          <Image source={{ uri: product.image_url }} style={styles.productImage} />
+          {images.length > 1 ? (
+            <>
+              <FlatList
+                data={images}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(_, idx) => idx.toString()}
+                renderItem={({ item, index }) => (
+                  <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => setSelectedImageIndex(index)}
+                  >
+                    <Image
+                      source={{ uri: item }}
+                      style={[
+                        styles.productImage,
+                        { width: width, height: 300 },
+                      ]}
+                    />
+                  </TouchableOpacity>
+                )}
+                onMomentumScrollEnd={(e) => {
+                  const idx = Math.round(e.nativeEvent.contentOffset.x / width);
+                  setSelectedImageIndex(idx);
+                }}
+                initialScrollIndex={selectedImageIndex}
+                getItemLayout={(_, index) => ({
+                  length: width,
+                  offset: width * index,
+                  index,
+                })}
+              />
+              {/* Image indicators */}
+              <View style={styles.imageIndicators}>
+                {images.map((_, idx) => (
+                  <View
+                    key={idx}
+                    style={[
+                      styles.imageIndicatorDot,
+                      selectedImageIndex === idx
+                        ? styles.imageIndicatorDotActive
+                        : null,
+                    ]}
+                  />
+                ))}
+              </View>
+            </>
+          ) : (
+            <Image source={{ uri: images[0] }} style={styles.productImage} />
+          )}
           {discountPercentage > 0 && (
             <View style={styles.discountBadge}>
               <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
@@ -155,7 +239,9 @@ export default function ProductDetailScreen() {
               <Star size={14} color="#ffffff" fill="#ffffff" />
               <Text style={styles.ratingText}>{product.rating}</Text>
             </View>
-            <Text style={styles.reviews}>({product.reviews_count} reviews)</Text>
+            <Text style={styles.reviews}>
+              ({product.reviews_count} reviews)
+            </Text>
             <View style={styles.verifiedBadge}>
               <Shield size={12} color="#c6aa55" />
               <Text style={styles.verifiedText}>Verified</Text>
@@ -164,30 +250,44 @@ export default function ProductDetailScreen() {
 
           <View style={styles.priceSection}>
             <View style={styles.priceContainer}>
-              <Text style={styles.price}>₹{product.price.toLocaleString()}</Text>
+              <Text style={styles.price}>
+                ₹{product.price.toLocaleString()}
+              </Text>
               {product.original_price && (
-                <Text style={styles.originalPrice}>₹{product.original_price.toLocaleString()}</Text>
+                <Text style={styles.originalPrice}>
+                  ₹{product.original_price.toLocaleString()}
+                </Text>
               )}
             </View>
             {discountPercentage > 0 && (
-              <Text style={styles.savings}>You save ₹{(product.original_price! - product.price).toLocaleString()}</Text>
+              <Text style={styles.savings}>
+                You save ₹
+                {(product.original_price! - product.price).toLocaleString()}
+              </Text>
             )}
           </View>
 
           <View style={styles.stockSection}>
             <View style={styles.stockIndicator}>
-              <View style={[
-                styles.stockDot,
-                product.stock_quantity > 0 ? styles.inStockDot : styles.outOfStockDot
-              ]} />
-              <Text style={[
-                styles.stockText,
-                product.stock_quantity > 0 ? styles.inStock : styles.outOfStock
-              ]}>
-                {product.stock_quantity > 0 
-                  ? `${product.stock_quantity} items available` 
-                  : 'Out of Stock'
-                }
+              <View
+                style={[
+                  styles.stockDot,
+                  product.stock_quantity > 0
+                    ? styles.inStockDot
+                    : styles.outOfStockDot,
+                ]}
+              />
+              <Text
+                style={[
+                  styles.stockText,
+                  product.stock_quantity > 0
+                    ? styles.inStock
+                    : styles.outOfStock,
+                ]}
+              >
+                {product.stock_quantity > 0
+                  ? `${product.stock_quantity} items available`
+                  : 'Out of Stock'}
               </Text>
             </View>
           </View>
@@ -198,19 +298,34 @@ export default function ProductDetailScreen() {
               <Text style={styles.quantityLabel}>Quantity:</Text>
               <View style={styles.quantityContainer}>
                 <TouchableOpacity
-                  style={[styles.quantityButton, quantity <= 1 && styles.quantityButtonDisabled]}
+                  style={[
+                    styles.quantityButton,
+                    quantity <= 1 && styles.quantityButtonDisabled,
+                  ]}
                   onPress={decreaseQuantity}
                   disabled={quantity <= 1}
                 >
-                  <Minus size={18} color={quantity <= 1 ? '#9b9591' : '#2e3f47'} />
+                  <Minus
+                    size={18}
+                    color={quantity <= 1 ? '#9b9591' : '#2e3f47'}
+                  />
                 </TouchableOpacity>
                 <Text style={styles.quantity}>{quantity}</Text>
                 <TouchableOpacity
-                  style={[styles.quantityButton, quantity >= product.stock_quantity && styles.quantityButtonDisabled]}
+                  style={[
+                    styles.quantityButton,
+                    quantity >= product.stock_quantity &&
+                      styles.quantityButtonDisabled,
+                  ]}
                   onPress={increaseQuantity}
                   disabled={quantity >= product.stock_quantity}
                 >
-                  <Plus size={18} color={quantity >= product.stock_quantity ? '#9b9591' : '#2e3f47'} />
+                  <Plus
+                    size={18}
+                    color={
+                      quantity >= product.stock_quantity ? '#9b9591' : '#2e3f47'
+                    }
+                  />
                 </TouchableOpacity>
               </View>
             </View>
@@ -220,7 +335,9 @@ export default function ProductDetailScreen() {
           <View style={styles.featuresSection}>
             <View style={styles.feature}>
               <Truck size={20} color="#c6aa55" />
-              <Text style={styles.featureText}>Free delivery on orders above ₹2,999</Text>
+              <Text style={styles.featureText}>
+                Free delivery on orders above ₹2,999
+              </Text>
             </View>
             <View style={styles.feature}>
               <RotateCcw size={20} color="#c6aa55" />
@@ -261,7 +378,9 @@ export default function ProductDetailScreen() {
           <View style={styles.footerContent}>
             <View style={styles.totalPrice}>
               <Text style={styles.totalLabel}>Total:</Text>
-              <Text style={styles.totalAmount}>₹{(product.price * quantity).toLocaleString()}</Text>
+              <Text style={styles.totalAmount}>
+                ₹{(product.price * quantity).toLocaleString()}
+              </Text>
             </View>
             <TouchableOpacity
               style={styles.addToCartButton}

@@ -149,7 +149,7 @@ export default function SignupScreen() {
     try {
       // Send request to backend to verify OTP and email
       const response = await fetch(
-        `${'https://sanitaryshop-backend-2.onrender.com'}/api/auth/test-verify-otp`,
+        `${'http://172.16.214.181:3000'}/api/auth/test-verify-otp`,
         {
           method: 'POST',
           headers: {

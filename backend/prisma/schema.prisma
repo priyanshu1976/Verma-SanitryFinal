@@ -65,23 +65,34 @@ createdAt DateTime @default(now())
 
 model Product {
 id Int @id @default(autoincrement())
-name String
+itemCode String @unique // CSV: Item Code
+name String // CSV: Item Description
 description String?
 imageUrl String?
-price Float
+price Float // CSV: MRP
 originalPrice Float?
 isFeatured Boolean @default(false)
 isBestseller Boolean @default(false)
 categoryId Int
 category Category @relation(fields: [categoryId], references: [id])
+brandGroup String? // CSV: Brand Group
 availableStock Int @default(0)
-stockQuantity Int? @default(0) // Alias for availableStock
+stockQuantity Int? @default(0) // CSV: Stock
 rating Float? @default(0.0)
 reviewsCount Int? @default(0)
 taxPercent Float? @default(0.0)
 createdAt DateTime @default(now())
-orderItems OrderItem[]
 
+sdp Float? // CSV: SDP
+nrp Float? // CSV: NRP*
+mrp Float? // CSV: MRP
+hsn String? // CSV: HSN
+sgst Float? // CSV: SGST
+cgst Float? // CSV: CGST
+igst Float? // CSV: IGST
+cess Float? // CSV: CESS
+
+orderItems OrderItem[]
 CartItem CartItem[]
 }
 
@@ -142,4 +153,24 @@ quantity Int
 createdAt DateTime @default(now())
 
 Cart Cart[]
+}
+
+model Excel {
+id Int @id @default(autoincrement())
+itemCode String @unique
+itemDescription String
+brandGroup String
+stock Int
+sdp Float
+nrp Float
+mrp Float
+hsn String
+sgst Float
+cgst Float
+igst Float
+cess Float
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+
+@@map("excel")
 }
