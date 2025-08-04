@@ -405,3 +405,5 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 });
+
+// redis , cludinary , aws s3 , forget password payment cart
