@@ -121,7 +121,7 @@ export const authService = {
   async resetPassword(email: string): Promise<ApiResponse<null>> {
     // This might need to be adjusted based on the actual backend implementation
     return formatResponse<null>(
-      api.post('/api/auth/send-code', { email, purpose: 'reset' })
+      api.post('/api/auth/forgot-password', { email, purpose: 'reset' })
     );
   },
 };
