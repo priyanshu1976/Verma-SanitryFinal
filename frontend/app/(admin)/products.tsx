@@ -90,15 +90,18 @@ export default function AdminProductsScreen() {
 
   const fetchProducts = async (pageToFetch = 1, reset = false) => {
     try {
+      console.log(pageToFetch, 'fetching');
       if (reset) setIsLoading(true);
       else setIsLoadingMore(true);
       const response = await productService.getProducts({
         page: pageToFetch,
         limit: 15,
       });
+
       if (response.success) {
         // The backend returns { products: Product[], ... }
         const newProducts = response.data.products || [];
+
         if (reset) {
           setProducts(newProducts);
         } else {
@@ -141,6 +144,7 @@ export default function AdminProductsScreen() {
     return uploadedUrls;
   };
 
+  // ! this is working fine
   const handleUpdateProduct = async () => {
     try {
       if (
@@ -198,6 +202,7 @@ export default function AdminProductsScreen() {
     }
   };
 
+  // ! this is also working fine i guess
   const handleDeleteProduct = async (
     productId: string | number,
     productName: string
@@ -258,7 +263,21 @@ export default function AdminProductsScreen() {
       Array.isArray((product as any).images) &&
       (product as any).images.length > 0
     ) {
-      images = (product as any).images;
+      // If images is an array of objects with imageUrl, extract the URLs
+      // If images is array of strings, just use as is
+      if (
+        typeof (product as any).images[0] === 'object' &&
+        (product as any).images[0] !== null &&
+        'imageUrl' in (product as any).images[0]
+      ) {
+        images = (product as any).images
+          .map((img: any) => img?.imageUrl)
+          .filter((url: string | undefined) => !!url);
+      } else {
+        images = (product as any).images.filter(
+          (img: any) => typeof img === 'string'
+        );
+      }
     } else if (product.imageUrl) {
       images = [product.imageUrl];
     } else if ((product as any).image_url) {
@@ -316,48 +335,85 @@ export default function AdminProductsScreen() {
   );
 
   const renderProduct = ({ item }: { item: Product }) => {
-    // Try to get all images if available, fallback to imageUrl
-    let images: string[] = [];
+    // Extract images array of URLs from item.images (API returns array of {imageUrl, ...})
+    let imageUrls: string[] = [];
+
     if (
       Array.isArray((item as any).images) &&
       (item as any).images.length > 0
     ) {
-      images = (item as any).images;
-    } else if (item.imageUrl) {
-      images = [item.imageUrl];
-    } else if ((item as any).image_url) {
-      images = [(item as any).image_url];
+      // If images is an array of objects with imageUrl, extract the URLs
+      if (
+        typeof (item as any).images[0] === 'object' &&
+        (item as any).images[0] !== null &&
+        'imageUrl' in (item as any).images[0]
+      ) {
+        imageUrls = (item as any).images
+          .map((img: any) => img?.imageUrl)
+          .filter((url: string | undefined) => !!url);
+      } else {
+        imageUrls = (item as any).images.filter(
+          (img: any) => typeof img === 'string'
+        );
+      }
     }
+
+    // Fallbacks if no images array or empty
+    if (imageUrls.length === 0) {
+      if (item.imageUrl) {
+        imageUrls = [item.imageUrl];
+      } else if ((item as any).image_url) {
+        imageUrls = [(item as any).image_url];
+      }
+    }
+
+    // Final fallback placeholder
+    const displayImage =
+      imageUrls.length > 0
+        ? imageUrls[0]
+        : 'https://images.pexels.com/photos/6585751/pexels-photo-6585751.jpeg?auto=compress&cs=tinysrgb&w=500';
+
+    // Stock: prefer availableStock, fallback to stockQuantity/stock_quantity
+    let stock =
+      typeof item.availableStock === 'number'
+        ? item.availableStock
+        : typeof (item as any).stockQuantity === 'number'
+        ? (item as any).stockQuantity
+        : typeof (item as any).stock_quantity === 'number'
+        ? (item as any).stock_quantity
+        : 0;
+
+    // Category name fallback
+    const categoryName =
+      item.category?.name ||
+      (typeof (item as any).category === 'string'
+        ? (item as any).category
+        : '');
+
     return (
       <TouchableOpacity
         style={styles.productCard}
         onPress={() => openEditModal(item)}
         activeOpacity={0.85}
       >
-        <Image
-          source={{
-            uri:
-              images.length > 0
-                ? images[0]
-                : 'https://images.pexels.com/photos/6585751/pexels-photo-6585751.jpeg?auto=compress&cs=tinysrgb&w=500',
-          }}
-          style={styles.productImage}
-        />
+        <Image source={{ uri: displayImage }} style={styles.productImage} />
         <View style={styles.productInfo}>
           <Text style={styles.productName} numberOfLines={2}>
             {item.name}
           </Text>
-          <Text style={styles.productCategory}>{item.category?.name}</Text>
+          <Text style={styles.productCategory}>{categoryName}</Text>
           <View style={styles.priceContainer}>
-            <Text style={styles.price}>₹{item.price.toLocaleString()}</Text>
+            <Text style={styles.price}>
+              ₹
+              {typeof item.price === 'number'
+                ? item.price.toLocaleString()
+                : typeof (item as any).mrp === 'number'
+                ? (item as any).mrp.toLocaleString()
+                : 'N/A'}
+            </Text>
           </View>
-          <Text
-            style={[
-              styles.stockText,
-              item.availableStock < 10 && styles.lowStock,
-            ]}
-          >
-            Stock: {item.availableStock}
+          <Text style={[styles.stockText, stock < 10 && styles.lowStock]}>
+            Stock: {stock}
           </Text>
         </View>
         <View style={styles.productActions}>
@@ -536,35 +592,37 @@ export default function AdminProductsScreen() {
                 marginBottom: 8,
               }}
             >
-              {formData.images.map((uri, idx) => (
-                <View
-                  key={uri + idx}
-                  style={{
-                    position: 'relative',
-                    marginRight: 8,
-                    marginBottom: 8,
-                  }}
-                >
-                  <Image
-                    source={{ uri }}
-                    style={{ width: 64, height: 64, borderRadius: 8 }}
-                  />
-                  <TouchableOpacity
+              {formData.images.map((uri, idx) =>
+                uri ? (
+                  <View
+                    key={uri + idx}
                     style={{
-                      position: 'absolute',
-                      top: -8,
-                      right: -8,
-                      backgroundColor: '#fff',
-                      borderRadius: 12,
-                      padding: 2,
-                      elevation: 2,
+                      position: 'relative',
+                      marginRight: 8,
+                      marginBottom: 8,
                     }}
-                    onPress={() => removeImage(idx)}
                   >
-                    <X size={16} color="#EF4444" />
-                  </TouchableOpacity>
-                </View>
-              ))}
+                    <Image
+                      source={{ uri }}
+                      style={{ width: 64, height: 64, borderRadius: 8 }}
+                    />
+                    <TouchableOpacity
+                      style={{
+                        position: 'absolute',
+                        top: -8,
+                        right: -8,
+                        backgroundColor: '#fff',
+                        borderRadius: 12,
+                        padding: 2,
+                        elevation: 2,
+                      }}
+                      onPress={() => removeImage(idx)}
+                    >
+                      <X size={16} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                ) : null
+              )}
               {formData.images.length < 5 && (
                 <TouchableOpacity
                   style={{

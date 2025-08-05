@@ -18,8 +18,6 @@ import {
   Minus,
   Plus,
   ShoppingCart,
-  Heart,
-  Share2,
   Shield,
   Truck,
   RotateCcw,
@@ -30,12 +28,45 @@ import { Product } from '@/types/api';
 
 const { width } = Dimensions.get('window');
 
+// Helper: get images array from product, always return array of image URLs
+function getProductImages(product: any): string[] {
+  if (!product) return [];
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    // Prefer image_url or imageUrl from each image object
+    return product.images
+      .map((img: any) => img.image_url || img.imageUrl || '')
+      .filter(Boolean);
+  }
+  if (product.image_url) return [product.image_url];
+  if (product.imageUrl) return [product.imageUrl];
+  return [];
+}
+
+// Helper: get stock quantity (stock_quantity or stockQuantity or availableStock)
+function getStockQuantity(product: any): number {
+  return (
+    product.stock_quantity ??
+    product.stockQuantity ??
+    product.availableStock ??
+    0
+  );
+}
+
+// Helper: get original price (original_price or originalPrice or mrp)
+function getOriginalPrice(product: any): number | null {
+  return product.original_price ?? product.originalPrice ?? product.mrp ?? null;
+}
+
+// Helper: get reviews count (reviews_count or reviewsCount)
+function getReviewsCount(product: any): number {
+  return product.reviews_count ?? product.reviewsCount ?? 0;
+}
+
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const { addToCart } = useCart();
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
-  const [isFavorite, setIsFavorite] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
@@ -48,6 +79,8 @@ export default function ProductDetailScreen() {
   const fetchProduct = async () => {
     try {
       const response = await productService.getProductById(id as string);
+      // Debug: log the response for troubleshooting
+      console.log('Product API response:', response.data);
       if (response.success && response.data) {
         setProduct(response.data);
       } else {
@@ -61,25 +94,88 @@ export default function ProductDetailScreen() {
     }
   };
 
-  // Helper: get images array from product
-  const getProductImages = (product: Product) => {
-    if (!product) return [];
-    // If product.images exists and is an array and has at least one image, use it
-    if (Array.isArray(product.images) && product.images.length > 0) {
-      return product.images;
-    }
-    // Otherwise, fallback to image_url if present
-    if (product.image_url) {
-      return [product.image_url];
-    }
-    return [];
-  };
-
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading product details...</Text>
+        <View style={{ padding: 16 }}>
+          {/* Image Skeleton */}
+          <View
+            style={{
+              width: '100%',
+              aspectRatio: 1,
+              backgroundColor: '#ececec',
+              borderRadius: 16,
+              marginBottom: 24,
+              overflow: 'hidden',
+            }}
+          >
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: '#e0e0e0',
+                opacity: 0.7,
+              }}
+            />
+          </View>
+          {/* Title Skeleton */}
+          <View
+            style={{
+              width: '70%',
+              height: 28,
+              backgroundColor: '#e0e0e0',
+              borderRadius: 8,
+              marginBottom: 12,
+            }}
+          />
+          {/* Price Skeleton */}
+          <View
+            style={{
+              width: 100,
+              height: 22,
+              backgroundColor: '#e0e0e0',
+              borderRadius: 8,
+              marginBottom: 16,
+            }}
+          />
+          {/* Description Skeleton */}
+          <View
+            style={{
+              width: '100%',
+              height: 16,
+              backgroundColor: '#e0e0e0',
+              borderRadius: 8,
+              marginBottom: 8,
+            }}
+          />
+          <View
+            style={{
+              width: '90%',
+              height: 16,
+              backgroundColor: '#e0e0e0',
+              borderRadius: 8,
+              marginBottom: 8,
+            }}
+          />
+          <View
+            style={{
+              width: '80%',
+              height: 16,
+              backgroundColor: '#e0e0e0',
+              borderRadius: 8,
+              marginBottom: 24,
+            }}
+          />
+          {/* Add to Cart Button Skeleton */}
+          <View
+            style={{
+              width: '60%',
+              height: 48,
+              backgroundColor: '#e0e0e0',
+              borderRadius: 16,
+              alignSelf: 'center',
+              marginTop: 24,
+            }}
+          />
         </View>
       </SafeAreaView>
     );
@@ -101,7 +197,11 @@ export default function ProductDetailScreen() {
     );
   }
 
+  // Use helpers to get correct fields
   const images = getProductImages(product);
+  const stockQuantity = getStockQuantity(product);
+  const originalPrice = getOriginalPrice(product);
+  const reviewsCount = getReviewsCount(product);
 
   const handleAddToCart = () => {
     for (let i = 0; i < quantity; i++) {
@@ -110,7 +210,7 @@ export default function ProductDetailScreen() {
         name: product.name,
         price: product.price,
         image_url: images[0], // Use first image for cart
-        maxQuantity: product.stock_quantity,
+        maxQuantity: stockQuantity,
       });
     }
     Alert.alert(
@@ -120,7 +220,7 @@ export default function ProductDetailScreen() {
   };
 
   const increaseQuantity = () => {
-    if (quantity < product.stock_quantity) {
+    if (quantity < stockQuantity) {
       setQuantity(quantity + 1);
     }
   };
@@ -131,12 +231,10 @@ export default function ProductDetailScreen() {
     }
   };
 
-  const discountPercentage = product.original_price
-    ? Math.round(
-        ((product.original_price - product.price) / product.original_price) *
-          100
-      )
-    : 0;
+  const discountPercentage =
+    originalPrice && product.price
+      ? Math.round(((originalPrice - product.price) / originalPrice) * 100)
+      : 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -149,21 +247,7 @@ export default function ProductDetailScreen() {
           >
             <ArrowLeft size={24} color="#2e3f47" />
           </TouchableOpacity>
-          <View style={styles.headerActions}>
-            {/* <TouchableOpacity style={styles.headerButton}>
-              <Share2 size={20} color="#2e3f47" />
-            </TouchableOpacity> */}
-            {/* <TouchableOpacity
-              style={[styles.headerButton, isFavorite && styles.favoriteActive]}
-              onPress={() => setIsFavorite(!isFavorite)}
-            >
-              <Heart
-                size={20}
-                color={isFavorite ? "#ffffff" : "#2e3f47"}
-                fill={isFavorite ? "#ffffff" : "none"}
-              />
-            </TouchableOpacity> */}
-          </View>
+          <View style={styles.headerActions} />
         </View>
 
         {/* Product Images */}
@@ -216,8 +300,21 @@ export default function ProductDetailScreen() {
                 ))}
               </View>
             </>
-          ) : (
+          ) : images.length === 1 ? (
             <Image source={{ uri: images[0] }} style={styles.productImage} />
+          ) : (
+            <View
+              style={[
+                styles.productImage,
+                {
+                  backgroundColor: '#f3f3f3',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                },
+              ]}
+            >
+              <Text style={{ color: '#9b9591' }}>No Image</Text>
+            </View>
           )}
           {discountPercentage > 0 && (
             <View style={styles.discountBadge}>
@@ -228,20 +325,22 @@ export default function ProductDetailScreen() {
 
         {/* Product Info */}
         <View style={styles.productInfo}>
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{product.category?.name}</Text>
-          </View>
+          {product.category?.name && (
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText}>{product.category.name}</Text>
+            </View>
+          )}
 
           <Text style={styles.productName}>{product.name}</Text>
 
           <View style={styles.ratingContainer}>
             <View style={styles.ratingBadge}>
               <Star size={14} color="#ffffff" fill="#ffffff" />
-              <Text style={styles.ratingText}>{product.rating}</Text>
+              <Text style={styles.ratingText}>
+                {typeof product.rating === 'number' ? product.rating : 0}
+              </Text>
             </View>
-            <Text style={styles.reviews}>
-              ({product.reviews_count} reviews)
-            </Text>
+            <Text style={styles.reviews}>({reviewsCount} reviews)</Text>
             <View style={styles.verifiedBadge}>
               <Shield size={12} color="#c6aa55" />
               <Text style={styles.verifiedText}>Verified</Text>
@@ -251,18 +350,17 @@ export default function ProductDetailScreen() {
           <View style={styles.priceSection}>
             <View style={styles.priceContainer}>
               <Text style={styles.price}>
-                ₹{product.price.toLocaleString()}
+                ₹{Number(product.price).toLocaleString()}
               </Text>
-              {product.original_price && (
+              {originalPrice && (
                 <Text style={styles.originalPrice}>
-                  ₹{product.original_price.toLocaleString()}
+                  ₹{Number(originalPrice).toLocaleString()}
                 </Text>
               )}
             </View>
             {discountPercentage > 0 && (
               <Text style={styles.savings}>
-                You save ₹
-                {(product.original_price! - product.price).toLocaleString()}
+                You save ₹{(originalPrice! - product.price).toLocaleString()}
               </Text>
             )}
           </View>
@@ -272,28 +370,24 @@ export default function ProductDetailScreen() {
               <View
                 style={[
                   styles.stockDot,
-                  product.stock_quantity > 0
-                    ? styles.inStockDot
-                    : styles.outOfStockDot,
+                  stockQuantity > 0 ? styles.inStockDot : styles.outOfStockDot,
                 ]}
               />
               <Text
                 style={[
                   styles.stockText,
-                  product.stock_quantity > 0
-                    ? styles.inStock
-                    : styles.outOfStock,
+                  stockQuantity > 0 ? styles.inStock : styles.outOfStock,
                 ]}
               >
-                {product.stock_quantity > 0
-                  ? `${product.stock_quantity} items available`
+                {stockQuantity > 0
+                  ? `${stockQuantity} items available`
                   : 'Out of Stock'}
               </Text>
             </View>
           </View>
 
           {/* Quantity Selector */}
-          {product.stock_quantity > 0 && (
+          {stockQuantity > 0 && (
             <View style={styles.quantitySection}>
               <Text style={styles.quantityLabel}>Quantity:</Text>
               <View style={styles.quantityContainer}>
@@ -314,17 +408,14 @@ export default function ProductDetailScreen() {
                 <TouchableOpacity
                   style={[
                     styles.quantityButton,
-                    quantity >= product.stock_quantity &&
-                      styles.quantityButtonDisabled,
+                    quantity >= stockQuantity && styles.quantityButtonDisabled,
                   ]}
                   onPress={increaseQuantity}
-                  disabled={quantity >= product.stock_quantity}
+                  disabled={quantity >= stockQuantity}
                 >
                   <Plus
                     size={18}
-                    color={
-                      quantity >= product.stock_quantity ? '#9b9591' : '#2e3f47'
-                    }
+                    color={quantity >= stockQuantity ? '#9b9591' : '#2e3f47'}
                   />
                 </TouchableOpacity>
               </View>
@@ -356,30 +447,31 @@ export default function ProductDetailScreen() {
           </View>
 
           {/* Specifications */}
-          {product.specifications && product.specifications.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Specifications</Text>
-              <View style={styles.specificationsContainer}>
-                {product.specifications.map((spec, index) => (
-                  <View key={index} style={styles.specItem}>
-                    <View style={styles.specBullet} />
-                    <Text style={styles.specText}>{spec}</Text>
-                  </View>
-                ))}
+          {Array.isArray(product.specifications) &&
+            product.specifications.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Specifications</Text>
+                <View style={styles.specificationsContainer}>
+                  {product.specifications.map((spec: any, index: number) => (
+                    <View key={index} style={styles.specItem}>
+                      <View style={styles.specBullet} />
+                      <Text style={styles.specText}>{spec}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
-            </View>
-          )}
+            )}
         </View>
       </ScrollView>
 
       {/* Add to Cart Button */}
-      {product.stock_quantity > 0 && (
+      {stockQuantity > 0 && (
         <View style={styles.footer}>
           <View style={styles.footerContent}>
             <View style={styles.totalPrice}>
               <Text style={styles.totalLabel}>Total:</Text>
               <Text style={styles.totalAmount}>
-                ₹{(product.price * quantity).toLocaleString()}
+                ₹{(Number(product.price) * quantity).toLocaleString()}
               </Text>
             </View>
             <TouchableOpacity
@@ -744,5 +836,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
+  },
+  imageIndicators: {
+    position: 'absolute',
+    bottom: 12,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  imageIndicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#e7e0d0',
+    marginHorizontal: 4,
+  },
+  imageIndicatorDotActive: {
+    backgroundColor: '#c6aa55',
   },
 });

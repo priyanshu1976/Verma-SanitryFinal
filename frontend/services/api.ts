@@ -171,7 +171,9 @@ export const productService = {
     if (params?.search) queryParams.search = params.search;
     if (params?.tags) queryParams.tags = params.tags;
     queryParams.page = params?.page !== undefined ? params.page : 1;
-    queryParams.limit = params?.limit !== undefined ? params.limit : 30;
+    queryParams.limit = params?.limit || 30;
+
+    console.log(' this is the query params', queryParams);
 
     return api
       .get('/api/products', { params: queryParams })
