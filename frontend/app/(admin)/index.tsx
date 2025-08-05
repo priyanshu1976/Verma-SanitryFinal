@@ -8,7 +8,14 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Package, ShoppingBag, Users, TrendingUp, DollarSign, Eye } from 'lucide-react-native';
+import {
+  Package,
+  ShoppingBag,
+  Users,
+  TrendingUp,
+  DollarSign,
+  Eye,
+} from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { orderService, productService, adminService } from '@/services/api';
 
@@ -36,11 +43,12 @@ export default function AdminDashboardScreen() {
 
   const fetchDashboardStats = async () => {
     try {
-      const [ordersResponse, productsResponse, dashboardResponse] = await Promise.all([
-        orderService.getOrders(),
-        productService.getProducts(),
-        adminService.getDashboardStats(),
-      ]);
+      const [ordersResponse, productsResponse, dashboardResponse] =
+        await Promise.all([
+          orderService.getOrders(),
+          productService.getProducts(),
+          adminService.getDashboardStats(),
+        ]);
 
       let totalRevenue = 0;
       let recentOrders: any[] = [];
@@ -49,21 +57,28 @@ export default function AdminDashboardScreen() {
 
       if (ordersResponse.success) {
         const orders = ordersResponse.data || [];
-        totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
+        totalRevenue = orders.reduce(
+          (sum, order) => sum + order.total_amount,
+          0
+        );
         recentOrders = orders.slice(0, 5);
       }
 
       if (productsResponse.success) {
-        const products = productsResponse.data || [];
-        lowStockProducts = products.filter(product => product.availableStock < 10).slice(0, 5);
+        const products = productsResponse.data.products || [];
+        lowStockProducts = products
+          .filter((product) => product.availableStock < 10)
+          .slice(0, 5);
       }
 
       if (dashboardResponse.success) {
         const dashboardData = dashboardResponse.data;
         totalUsers = dashboardData?.totalUsers || 0;
         // Use additional dashboard stats if available
-        if (dashboardData?.totalRevenue) totalRevenue = dashboardData.totalRevenue;
-        if (dashboardData?.recentOrders) recentOrders = dashboardData.recentOrders;
+        if (dashboardData?.totalRevenue)
+          totalRevenue = dashboardData.totalRevenue;
+        if (dashboardData?.recentOrders)
+          recentOrders = dashboardData.recentOrders;
       }
 
       setStats({
@@ -105,18 +120,24 @@ export default function AdminDashboardScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return '#F59E0B';
-      case 'processing': return '#3B82F6';
-      case 'shipped': return '#8B5CF6';
-      case 'delivered': return '#10B981';
-      case 'cancelled': return '#EF4444';
-      default: return '#6B7280';
+      case 'pending':
+        return '#F59E0B';
+      case 'processing':
+        return '#3B82F6';
+      case 'shipped':
+        return '#8B5CF6';
+      case 'delivered':
+        return '#10B981';
+      case 'cancelled':
+        return '#EF4444';
+      default:
+        return '#6B7280';
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -125,8 +146,12 @@ export default function AdminDashboardScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Welcome back, {user?.name?.split(' ')[0]}!</Text>
-            <Text style={styles.subtitle}>Here's what's happening with your store</Text>
+            <Text style={styles.greeting}>
+              Welcome back, {user?.name?.split(' ')[0]}!
+            </Text>
+            <Text style={styles.subtitle}>
+              Here's what's happening with your store
+            </Text>
           </View>
         </View>
 
@@ -169,16 +194,41 @@ export default function AdminDashboardScreen() {
           <View style={styles.card}>
             {stats.recentOrders.length > 0 ? (
               stats.recentOrders.map((order, index) => (
-                <View key={order.id} style={[styles.orderItem, index < stats.recentOrders.length - 1 && styles.orderItemBorder]}>
+                <View
+                  key={order.id}
+                  style={[
+                    styles.orderItem,
+                    index < stats.recentOrders.length - 1 &&
+                      styles.orderItemBorder,
+                  ]}
+                >
                   <View style={styles.orderInfo}>
-                    <Text style={styles.orderNumber}>#{order.id.slice(-6)}</Text>
-                    <Text style={styles.customerName}>{order.user?.name || 'Unknown User'}</Text>
+                    <Text style={styles.orderNumber}>
+                      #{order.id.slice(-6)}
+                    </Text>
+                    <Text style={styles.customerName}>
+                      {order.user?.name || 'Unknown User'}
+                    </Text>
                     <Text style={styles.customerName}>Customer Order</Text>
                   </View>
                   <View style={styles.orderDetails}>
-                    <Text style={styles.orderAmount}>₹{order.total_amount.toLocaleString()}</Text>
-                    <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(order.status)}20` }]}>
-                      <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
+                    <Text style={styles.orderAmount}>
+                      ₹{order.total_amount.toLocaleString()}
+                    </Text>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        {
+                          backgroundColor: `${getStatusColor(order.status)}20`,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusText,
+                          { color: getStatusColor(order.status) },
+                        ]}
+                      >
                         {order.status}
                       </Text>
                     </View>
@@ -202,26 +252,47 @@ export default function AdminDashboardScreen() {
           <View style={styles.card}>
             {stats.lowStockProducts.length > 0 ? (
               stats.lowStockProducts.map((product, index) => (
-                <View key={product.id} style={[styles.productItem, index < stats.lowStockProducts.length - 1 && styles.orderItemBorder]}>
+                <View
+                  key={product.id}
+                  style={[
+                    styles.productItem,
+                    index < stats.lowStockProducts.length - 1 &&
+                      styles.orderItemBorder,
+                  ]}
+                >
                   <View style={styles.productInfo}>
-                    <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-                    <Text style={styles.productPrice}>₹{product.price.toLocaleString()}</Text>
+                    <Text style={styles.productName} numberOfLines={1}>
+                      {product.name}
+                    </Text>
+                    <Text style={styles.productPrice}>
+                      ₹{product.price.toLocaleString()}
+                    </Text>
                   </View>
                   <View style={styles.stockInfo}>
-                    <Text style={[styles.stockText, { color: product.stock_quantity < 5 ? '#EF4444' : '#F59E0B' }]}>
+                    <Text
+                      style={[
+                        styles.stockText,
+                        {
+                          color:
+                            product.stock_quantity < 5 ? '#EF4444' : '#F59E0B',
+                        },
+                      ]}
+                    >
                       {product.stock_quantity} left
                     </Text>
                   </View>
                 </View>
               ))
             ) : (
-              <Text style={styles.emptyText}>All products are well stocked</Text>
+              <Text style={styles.emptyText}>
+                All products are well stocked
+              </Text>
             )}
           </View>
         </View>
 
         {/* Quick Actions */}
-        <View style={styles.section}>
+        {/* <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActions}>
             <TouchableOpacity style={styles.actionButton}>
@@ -237,7 +308,7 @@ export default function AdminDashboardScreen() {
               <Text style={styles.actionText}>Analytics</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </View> */}
       </ScrollView>
     </SafeAreaView>
   );
