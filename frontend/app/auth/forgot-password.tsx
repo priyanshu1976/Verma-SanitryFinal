@@ -17,8 +17,9 @@ import {
   Lock,
 } from 'lucide-react-native';
 import axios from 'axios';
+import { base_url } from '@/cred';
 
-const API_BASE_URL = process.env.API_BASE_URL || 'http://172.16.214.34:3000';
+const API_BASE_URL = process.env.API_BASE_URL || base_url;
 
 export default function ForgotPasswordScreen() {
   const [step, setStep] = useState<'email' | 'code' | 'reset' | 'success'>(

@@ -74,9 +74,9 @@ export default function CategoriesScreen() {
       }
 
       const productsResponse = await productService.getProducts(params);
-      // console.log(productsResponse, 'this is the product data');
+      console.log(productsResponse, 'this is the product data');
       if (productsResponse.success) {
-        setProducts(productsResponse.data || []);
+        setProducts(productsResponse.data.products || []);
       }
     } catch (error) {
       console.error('Error fetching products:', error);

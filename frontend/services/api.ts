@@ -10,9 +10,10 @@ import {
   PaginatedResponse,
 } from '@/types/api';
 import * as SecureStore from 'expo-secure-store';
+import { base_url } from '@/cred';
 
 // Create axios instance with base URL and default headers
-const API_BASE_URL = process.env.API_BASE_URL || 'http://172.16.214.181:3000/';
+const API_BASE_URL = process.env.API_BASE_URL || base_url;
 
 console.log(API_BASE_URL, 'this is the baseurl');
 
@@ -163,24 +164,17 @@ export const productService = {
     page?: number;
     limit?: number;
   }): Promise<PaginatedResponse<Product>> {
-    // Convert to query parameters
-    const queryParams = new URLSearchParams();
-    if (params?.category_id)
-      queryParams.append('categoryId', params.category_id);
-    if (params?.search) queryParams.append('search', params.search);
-    if (params?.tags)
-      params.tags.forEach((tag) => queryParams.append('tags', tag));
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    // Always send page and limit in the API call, default limit to 50
+    const queryParams: Record<string, any> = {};
 
-    const queryString = queryParams.toString();
-    let url = '/api/products';
-    if (queryString) {
-      url += `?${queryString}`;
-    }
+    if (params?.category_id) queryParams.categoryId = params.category_id;
+    if (params?.search) queryParams.search = params.search;
+    if (params?.tags) queryParams.tags = params.tags;
+    queryParams.page = params?.page !== undefined ? params.page : 1;
+    queryParams.limit = params?.limit !== undefined ? params.limit : 30;
 
     return api
-      .get(url)
+      .get('/api/products', { params: queryParams })
       .then((response) => ({
         success: true,
         data: response.data,
@@ -197,7 +191,7 @@ export const productService = {
         data: [],
         pagination: {
           page: 1,
-          limit: 10,
+          limit: 50,
           total: 0,
           totalPages: 0,
         },
