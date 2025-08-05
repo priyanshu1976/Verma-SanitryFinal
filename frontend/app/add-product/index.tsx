@@ -58,7 +58,8 @@ export default function AddProductScreen() {
     name: '',
     description: '',
     price: '',
-    imageUrl: '',
+    // imageUrl: '', // Remove single imageUrl
+    images: [] as string[], // Add images array
     categoryId: '',
     availableStock: '',
     isFeatured: false,
@@ -66,7 +67,7 @@ export default function AddProductScreen() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
-  const [localImage, setLocalImage] = useState<string | null>(null);
+  const [localImages, setLocalImages] = useState<string[]>([]); // For local preview
 
   // For custom dropdown
   const [categoryModalVisible, setCategoryModalVisible] = useState(false);
@@ -86,7 +87,7 @@ export default function AddProductScreen() {
     }
   };
 
-  const pickImage = async () => {
+  const pickImages = async () => {
     // Ask for permission
     let permissionResult = true;
     // if (Platform.OS === 'ios') {
@@ -103,26 +104,45 @@ export default function AddProductScreen() {
     //   );
     //   return;
     // }
-    // Pick image
+    // Pick images
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
+      allowsMultipleSelection: true,
+      allowsEditing: false,
       quality: 0.8,
+      selectionLimit: 5, // Limit to 5 images
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      const pickedUri = result.assets[0].uri;
-      setLocalImage(pickedUri);
       setImageUploading(true);
-      const uploadedUrl = await uploadImageToCloudinary(pickedUri);
+      const uris = result.assets.map((asset) => asset.uri);
+      setLocalImages((prev) => [...prev, ...uris]);
+      // Upload all images in parallel
+      const uploadPromises = uris.map((uri) => uploadImageToCloudinary(uri));
+      const uploadedUrls = await Promise.all(uploadPromises);
       setImageUploading(false);
-      if (uploadedUrl) {
-        setFormData((prev) => ({ ...prev, imageUrl: uploadedUrl }));
-      } else {
-        Alert.alert('Upload failed', 'Could not upload image to Cloudinary.');
+      const successfulUrls = uploadedUrls.filter((url): url is string => !!url);
+      if (successfulUrls.length > 0) {
+        setFormData((prev) => ({
+          ...prev,
+          images: [...prev.images, ...successfulUrls],
+        }));
+      }
+      if (successfulUrls.length < uris.length) {
+        Alert.alert(
+          'Upload failed',
+          'Some images could not be uploaded to Cloudinary.'
+        );
       }
     }
+  };
+
+  const removeImage = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
+    }));
+    setLocalImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleAddProduct = async () => {
@@ -136,9 +156,12 @@ export default function AddProductScreen() {
         name: formData.name,
         description: formData.description,
         price: parseFloat(formData.price),
-        imageUrl:
-          formData.imageUrl ||
-          'https://images.pexels.com/photos/6585751/pexels-photo-6585751.jpeg?auto=compress&cs=tinysrgb&w=500',
+        images:
+          formData.images.length > 0
+            ? formData.images
+            : [
+                'https://images.pexels.com/photos/6585751/pexels-photo-6585751.jpeg?auto=compress&cs=tinysrgb&w=500',
+              ],
         categoryId: parseInt(formData.categoryId),
         availableStock: parseInt(formData.availableStock) || 0,
         isFeatured: formData.isFeatured,
@@ -223,36 +246,83 @@ export default function AddProductScreen() {
           </View>
         </View>
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Product Image</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Text style={styles.label}>Product Images</Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
             <TouchableOpacity
               style={styles.imagePickerButton}
-              onPress={pickImage}
+              onPress={pickImages}
               disabled={imageUploading}
             >
               <Text style={styles.imagePickerButtonText}>
-                {imageUploading ? 'Uploading...' : 'Pick Image'}
+                {imageUploading ? 'Uploading...' : 'Pick Images'}
               </Text>
             </TouchableOpacity>
             {imageUploading && (
               <ActivityIndicator size="small" color="#0066CC" />
             )}
-            {formData.imageUrl ? (
-              <Image
-                source={{ uri: formData.imageUrl }}
-                style={styles.imagePreview}
-              />
-            ) : null}
+            {formData.images && formData.images.length > 0 && (
+              <View
+                style={{
+                  flexDirection: 'row',
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                {formData.images.map((img, idx) => (
+                  <View
+                    key={img + idx}
+                    style={{
+                      position: 'relative',
+                      marginRight: 8,
+                      marginTop: 8,
+                    }}
+                  >
+                    <Image source={{ uri: img }} style={styles.imagePreview} />
+                    <TouchableOpacity
+                      style={styles.removeImageButton}
+                      onPress={() => removeImage(idx)}
+                    >
+                      <Text style={styles.removeImageButtonText}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
+          {/* Optionally, allow manual input of image URLs */}
           <TextInput
             style={[styles.input, { marginTop: 8 }]}
-            value={formData.imageUrl}
-            onChangeText={(text) =>
-              setFormData((prev) => ({ ...prev, imageUrl: text }))
-            }
-            placeholder="https://example.com/image.jpg"
+            value={''}
+            onChangeText={(text) => {
+              // Add image URL to images array if valid
+              if (text && text.startsWith('http')) {
+                setFormData((prev) => ({
+                  ...prev,
+                  images: [...prev.images, text],
+                }));
+              }
+            }}
+            placeholder="Paste image URL and press enter"
             autoCapitalize="none"
             autoCorrect={false}
+            onSubmitEditing={(e) => {
+              const text = e.nativeEvent.text;
+              if (text && text.startsWith('http')) {
+                setFormData((prev) => ({
+                  ...prev,
+                  images: [...prev.images, text],
+                }));
+              }
+            }}
+            blurOnSubmit={true}
           />
         </View>
         <View style={styles.row}>
@@ -556,9 +626,27 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 8,
-    marginLeft: 8,
+    marginLeft: 0,
     borderWidth: 1,
     borderColor: '#D1D5DB',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
+  removeImageButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    lineHeight: 18,
   },
   // Custom dropdown styles
   customDropdown: {

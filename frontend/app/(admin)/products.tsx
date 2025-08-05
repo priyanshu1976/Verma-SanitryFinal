@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -30,6 +31,11 @@ export default function AdminProductsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -43,21 +49,39 @@ export default function AdminProductsScreen() {
   });
 
   useEffect(() => {
-    fetchProducts();
+    fetchProducts(1, true);
     fetchCategories();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (pageToFetch = 1, reset = false) => {
     try {
-      const response = await productService.getProducts();
+      if (reset) setIsLoading(true);
+      else setIsLoadingMore(true);
+      console.log('new page number', pageToFetch);
+
+      // Assume productService.getProducts supports pagination: getProducts({ page, limit })
+      // If not, you may need to adjust this to match your API.
+      const response = await productService.getProducts({
+        page: pageToFetch,
+        limit: 15,
+      });
       if (response.success) {
-        setProducts(response.data || []);
+        const newProducts = response.data.products || [];
+        if (reset) {
+          setProducts(newProducts);
+        } else {
+          setProducts((prev) => [...prev, ...newProducts]);
+        }
+        // If less than limit, no more products
+        setHasMore(newProducts.length === 15);
+        setPage(pageToFetch);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
       Alert.alert('Error', 'Failed to fetch products');
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   };
 
@@ -99,7 +123,7 @@ export default function AdminProductsScreen() {
       if (response.success) {
         Alert.alert('Success', 'Product added successfully');
         resetForm();
-        fetchProducts();
+        fetchProducts(1, true);
       } else {
         Alert.alert('Error', response.error || 'Failed to add product');
       }
@@ -143,7 +167,7 @@ export default function AdminProductsScreen() {
         Alert.alert('Success', 'Product updated successfully');
         setEditingProduct(null);
         resetForm();
-        fetchProducts();
+        fetchProducts(1, true);
       } else {
         Alert.alert('Error', response.error || 'Failed to update product');
       }
@@ -172,7 +196,7 @@ export default function AdminProductsScreen() {
               );
               if (response.success) {
                 Alert.alert('Success', 'Product deleted successfully');
-                fetchProducts();
+                fetchProducts(1, true);
               } else {
                 Alert.alert(
                   'Error',
@@ -257,6 +281,30 @@ export default function AdminProductsScreen() {
     </View>
   );
 
+  // "Load More" button for pagination
+  const renderFooter = () => {
+    if (!hasMore) return null;
+    return (
+      <View style={styles.loadMoreContainer}>
+        <TouchableOpacity
+          style={styles.loadMoreButton}
+          onPress={() => {
+            if (!isLoadingMore && hasMore) {
+              fetchProducts(page + 1, false);
+            }
+          }}
+          disabled={isLoadingMore}
+        >
+          {isLoadingMore ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.loadMoreButtonText}>Load More Products</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -288,9 +336,19 @@ export default function AdminProductsScreen() {
         <FlatList
           data={filteredProducts}
           renderItem={renderProduct}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(_, index) => index.toString()}
           contentContainerStyle={styles.productsList}
           showsVerticalScrollIndicator={false}
+          ListFooterComponent={renderFooter}
+          onEndReachedThreshold={0.6} // 1 - 0.7 = 0.3, so 70% scrolled
+          onEndReached={() => {
+            // This function will run when 70% of the list is reached
+            // Replace this with your desired function
+            // Example: fetch more products or log event
+            if (!isLoadingMore && hasMore) {
+              fetchProducts(page + 1, false);
+            }
+          }}
         />
       ) : (
         <View style={styles.emptyContainer}>
@@ -574,5 +632,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#FFFFFF',
+  },
+  loadMoreContainer: {
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 32,
+  },
+  loadMoreButton: {
+    backgroundColor: '#0066CC',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    minWidth: 180,
+  },
+  loadMoreButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
   },
 });
