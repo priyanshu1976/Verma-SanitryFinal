@@ -308,11 +308,11 @@ Authorization: Bearer ADMIN_TOKEN
 
 ## 🛍️ Product Routes
 
-### 1. Get Products (with Pagination)
+  ### 1. Get Products (with Pagination)
 
-```http
-GET /api/products?page=1&limit=20&categoryId=1&search=phone&isFeatured=true
-Authorization: Bearer TOKEN
+  ```http
+  GET /api/products?page=1&limit=20&categoryId=1&search=phone&isFeatured=true
+  Authorization: Bearer TOKEN
 ```
 
 **Query Parameters:**
