@@ -40,7 +40,7 @@ export default function HomeScreen() {
   const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [page, setpage] = useState(2);
+  const [page, setpage] = useState(1);
 
   useEffect(() => {
     fetchData();
@@ -485,7 +485,7 @@ export default function HomeScreen() {
       <FlatList
         data={showAllProducts ? allProducts : []}
         renderItem={showAllProducts ? renderAllProduct : undefined}
-        keyExtractor={(item) => String(item.id)}
+        keyExtractor={(_, index) => String(index)}
         numColumns={2}
         contentContainerStyle={[
           styles.allProductsList,
@@ -498,11 +498,24 @@ export default function HomeScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        onEndReached={() => {
-          // Your function to run when end is reached
-          console.log('hello');
+        onEndReached={async () => {
+          try {
+            // Fetch next page of products (implement pagination if supported)
+            const nextPage = page + 1;
+            console.log('current page', nextPage);
+            const response = await productService.getProducts({
+              page: nextPage,
+            });
+            // Assume response.data.products is an array of new products
+            if (response.success && Array.isArray(response.data?.products)) {
+              setAllProducts((prev) => [...prev, ...response.data.products]);
+              setpage(nextPage);
+            }
+          } catch (error) {
+            console.error('Error loading more products:', error);
+          }
         }}
-        onEndReachedThreshold={0.2}
+        onEndReachedThreshold={0.5}
         // If no products, still show header/footer
         ListEmptyComponent={
           !isLoading && (
@@ -690,7 +703,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    paddingHorizontal: 24,
+    paddingHorizontal: 14,
     marginBottom: 20,
   },
   sectionTitle: {
@@ -713,8 +726,8 @@ const styles = StyleSheet.create({
     paddingLeft: 24,
   },
   categoryCard: {
-    width: 120,
-    height: 140,
+    width: 80,
+    height: 80, // reduced from 140 to 100
     marginRight: 16,
     borderRadius: 20,
     overflow: 'hidden',
@@ -849,7 +862,7 @@ const styles = StyleSheet.create({
     color: '#9b9591',
     marginLeft: 8,
   },
-  featuredPriceContainer: {
+  ceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,

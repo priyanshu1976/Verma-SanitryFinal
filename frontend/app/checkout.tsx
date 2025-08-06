@@ -32,6 +32,7 @@ import RazorpayCheckout from 'react-native-razorpay';
 import axios from 'axios';
 import base64 from 'react-native-base64';
 import { api } from '@/services/api';
+import { base_url } from '@/cred';
 
 export default function CheckoutScreen() {
   const { items, getTotalPrice, clearCart } = useCart();
@@ -314,19 +315,15 @@ export default function CheckoutScreen() {
         },
         theme: { color: '#53a20e' },
       };
-
+      let orderData;
       try {
         RazorpayCheckout.open(options)
           .then((data) => {
             // handle success
-            const orderData = {
+            orderData = {
               user_id: user.id,
               total_amount: total,
-              delivery_address: `${selectedAddress.label}, ${
-                selectedAddress.house
-              }, ${selectedAddress.street}, ${selectedAddress.city}${
-                selectedAddress.landmark ? `, ${selectedAddress.landmark}` : ''
-              }`,
+              delivery_address: selectedAddress.id,
               payment_method: 'razorpay',
               payment_id: data.razorpay_payment_id,
               order_items: items.map((item) => ({
@@ -336,14 +333,15 @@ export default function CheckoutScreen() {
               })),
             };
 
-            // Place order logic here if needed
+            console.log(orderData);
+            const response = api.post(`${base_url}/api/orders`, orderData);
+            // console.log(response.data);
+            router.replace('/order-success');
+            clearCart();
           })
           .catch((error) => {
-            alert(`Error: ${error.code} | ${error.description}`);
+            alert(`Error in payment`);
           });
-
-        clearCart();
-        router.replace('/order-success');
       } catch (error: any) {
         console.error('Razorpay payment failed:', error);
         Alert.alert(
