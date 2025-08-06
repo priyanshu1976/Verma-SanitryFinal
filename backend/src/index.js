@@ -14,7 +14,7 @@ const paymentRoutes = require("./routes/payment.routes");
 const adminRoutes = require("./routes/admin.routes");
 const addressRoutes = require("./routes/address.routes");
 const locationRoutes = require("./routes/location.routes");
-
+const privacyPolicyRoutes = require("./routes/privacy.routes");
 // Configure dotenv with safe defaults
 dotenv.config();
 
@@ -53,7 +53,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/addresses", addressRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/location", locationRoutes);
-
+app.use("/api/privacyPolicy", privacyPolicyRoutes);
 // Load cart routes separately to avoid path-to-regexp issues
 const cartRoutes = require("./routes/cart.routes");
 app.use("/api/cart", cartRoutes);
