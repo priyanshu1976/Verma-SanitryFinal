@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Alert,
   Modal,
   Linking,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -28,12 +29,8 @@ import {
   MessageCircle,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
-
-const CITIES = [
-  { id: 'chandigarh', name: 'Chandigarh' },
-  { id: 'mohali', name: 'Mohali' },
-  { id: 'panchkula', name: 'Panchkula' },
-];
+import { CITIES } from '@/data/mockData';
+import { base_url } from '@/cred';
 
 export default function SignupScreen() {
   const { signUp, sendOTP } = useAuth();
@@ -54,6 +51,7 @@ export default function SignupScreen() {
   const [otpVerified, setOtpVerified] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [citySearch, setCitySearch] = useState('');
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -148,19 +146,16 @@ export default function SignupScreen() {
 
     try {
       // Send request to backend to verify OTP and email
-      const response = await fetch(
-        `${'http://172.16.214.181:3000'}/api/auth/test-verify-otp`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: formData.email,
-            code: formData.code,
-          }),
-        }
-      );
+      const response = await fetch(`${base_url}/api/auth/test-verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          code: formData.code,
+        }),
+      });
 
       const data = await response.json();
 
@@ -274,6 +269,17 @@ export default function SignupScreen() {
   // Helper to check if selected city is outside tricity
   const isOutsideTricity =
     formData.city && !CITIES.some((city) => city.id === formData.city);
+
+  // Memoized filtered cities for search
+  const filteredCities = useMemo(() => {
+    if (!citySearch.trim()) return CITIES;
+    const search = citySearch.trim().toLowerCase();
+    return CITIES.filter(
+      (city) =>
+        city.name.toLowerCase().includes(search) ||
+        city.id.toLowerCase().includes(search)
+    );
+  }, [citySearch]);
 
   return (
     <View style={styles.container}>
@@ -662,37 +668,70 @@ export default function SignupScreen() {
               <Text style={styles.modalCloseText}>Cancel</Text>
             </TouchableOpacity>
           </View>
+          {/* Search Input */}
+          <View style={styles.citySearchContainer}>
+            <TextInput
+              style={styles.citySearchInput}
+              placeholder="Search city..."
+              placeholderTextColor="#9b9591"
+              value={citySearch}
+              onChangeText={setCitySearch}
+              autoFocus={true}
+              autoCapitalize="words"
+              clearButtonMode="while-editing"
+            />
+          </View>
           <View style={styles.cityList}>
-            {CITIES.map((city) => (
-              <TouchableOpacity
-                key={city.id}
-                style={[
-                  styles.cityOption,
-                  formData.city === city.id && styles.cityOptionSelected,
-                ]}
-                onPress={() => {
-                  setFormData((prev) => ({ ...prev, city: city.id }));
-                  clearError('city');
-                  setShowCityModal(false);
-                }}
-              >
-                <MapPin
-                  size={20}
-                  color={formData.city === city.id ? '#c6aa55' : '#9b9591'}
-                />
-                <Text
+            <FlatList
+              data={filteredCities}
+              keyExtractor={(city) => city.id}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item: city }) => (
+                <TouchableOpacity
                   style={[
-                    styles.cityOptionText,
-                    formData.city === city.id && styles.cityOptionTextSelected,
+                    styles.cityOption,
+                    formData.city === city.id && styles.cityOptionSelected,
                   ]}
+                  onPress={() => {
+                    setFormData((prev) => ({ ...prev, city: city.id }));
+                    clearError('city');
+                    setShowCityModal(false);
+                    setCitySearch('');
+                  }}
                 >
-                  {city.name}
+                  <MapPin
+                    size={20}
+                    color={formData.city === city.id ? '#c6aa55' : '#9b9591'}
+                  />
+                  <Text
+                    style={[
+                      styles.cityOptionText,
+                      formData.city === city.id &&
+                        styles.cityOptionTextSelected,
+                    ]}
+                  >
+                    {city.name}
+                  </Text>
+                  {formData.city === city.id && (
+                    <CheckCircle size={20} color="#c6aa55" />
+                  )}
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <Text
+                  style={{
+                    color: '#9b9591',
+                    textAlign: 'center',
+                    marginTop: 24,
+                  }}
+                >
+                  No cities found.
                 </Text>
-                {formData.city === city.id && (
-                  <CheckCircle size={20} color="#c6aa55" />
-                )}
-              </TouchableOpacity>
-            ))}
+              }
+              showsVerticalScrollIndicator={false}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingBottom: 16 }}
+            />
             {/* Option for users not in tricity */}
             <TouchableOpacity
               style={[
@@ -703,6 +742,7 @@ export default function SignupScreen() {
                 setFormData((prev) => ({ ...prev, city: 'other' }));
                 clearError('city');
                 setShowCityModal(false);
+                setCitySearch('');
               }}
             >
               <MapPin
@@ -982,10 +1022,27 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Medium',
     color: '#631e25',
   },
+  citySearchContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 4,
+    backgroundColor: '#fff',
+  },
+  citySearchInput: {
+    backgroundColor: '#f3f3f3',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    fontFamily: 'Inter-Regular',
+    color: '#2e3f47',
+    borderWidth: 1,
+    borderColor: '#e7e0d0',
+  },
   cityList: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 8,
   },
   cityOption: {
     flexDirection: 'row',

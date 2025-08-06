@@ -96,15 +96,16 @@ exports.register = async (req, res) => {
     }
 
     // Only Tricity cities allowed
-    const allowedCities = ['Chandigarh', 'Mohali', 'Panchkula']
-    if (!allowedCities.includes(city)) {
-      return res.status(400).json({ message: 'Only Tricity users allowed' })
-    }
 
     // Check if user already exists
     const exists = await prisma.user.findUnique({ where: { email } })
     if (exists) return res.status(400).json({ message: 'User already exists' })
-
+    let tricity = true
+    const allowedCities = ['Chandigarh', 'Mohali', 'Panchkula']
+    if (!allowedCities.includes(city)) {
+      // todo implement here the user
+      tricity = false
+    }
     // Always use Redis for OTP verification
 
     // OTP is valid, remove from Redis
@@ -113,7 +114,7 @@ exports.register = async (req, res) => {
     // Hash password and create user
     const hashed = await bcrypt.hash(password, salt)
     const user = await prisma.user.create({
-      data: { name, phone, email, password: hashed, city },
+      data: { name, phone, email, password: hashed, city, isTricity: tricity },
     })
 
     const token = generateToken(user)

@@ -79,14 +79,6 @@ export default function PersonalInfoScreen() {
           <ArrowLeft size={24} color="#2e3f47" />
         </TouchableOpacity>
         <Text style={styles.title}>Personal Information</Text>
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => setIsEditing(!isEditing)}
-        >
-          <Text style={styles.editButtonText}>
-            {isEditing ? 'Cancel' : 'Edit'}
-          </Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -128,7 +120,8 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    textAlign: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: 24,
     paddingVertical: 16,
     backgroundColor: '#ffffff',

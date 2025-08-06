@@ -26,8 +26,7 @@ const DEVELOPERS = [
   {
     name: 'Surya K. Tiwari',
     role: 'Backend Developer, API Specialist & Database Administrator',
-    photo:
-      'https://avatars.githubusercontent.com/u/139453653?s=400&u=de556ecde6246cfb7989a031fe42fe79181553d4&v=4', // Place your image in assets/devs/aman.jpg
+    photo: require('assets/images/surya.png'),
     github: 'https://github.com/SuryaKTiwari11',
     contribution:
       'Contributions: API design, database management, and server deployment.',

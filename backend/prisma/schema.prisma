@@ -16,6 +16,7 @@ phone String
 city String
 role String @default("user")
 isBlocked Boolean @default(false)
+isTricity Boolean @default(false)
 createdAt DateTime @default(now())
 updatedAt DateTime @updatedAt
 

@@ -9,6 +9,7 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -21,6 +22,7 @@ import {
   Plus,
   Edit,
   Trash2,
+  MessageCircle,
 } from 'lucide-react-native';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,6 +31,7 @@ import { Address } from '@/types/api';
 import RazorpayCheckout from 'react-native-razorpay';
 import axios from 'axios';
 import base64 from 'react-native-base64';
+import { api } from '@/services/api';
 
 export default function CheckoutScreen() {
   const { items, getTotalPrice, clearCart } = useCart();
@@ -42,6 +45,12 @@ export default function CheckoutScreen() {
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const [isSubmittingAddress, setIsSubmittingAddress] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+
+  // Tricity check state
+  const [isTricity, setIsTricity] = useState<boolean | null>(null);
+  const [tricityMessage, setTricityMessage] = useState<string>('');
+  const [tricityWhatsapp, setTricityWhatsapp] = useState<string | null>(null);
+  const [checkingTricity, setCheckingTricity] = useState<boolean>(false);
 
   // Address form state
   const [addressForm, setAddressForm] = useState({
@@ -79,9 +88,34 @@ export default function CheckoutScreen() {
     },
   ];
 
-  // Load addresses on component mount
+  // Check tricity status from backend
+  async function checkTricity() {
+    setCheckingTricity(true);
+    try {
+      const response = await api.get('/api/location/istricity');
+      console.log(response.data);
+      const data = response.data.data;
+      if (data) {
+        setIsTricity(data.isTricity);
+        setTricityMessage(data.message || '');
+      } else {
+        setIsTricity(null);
+        setTricityMessage('Could not determine service availability.');
+        setTricityWhatsapp(null);
+      }
+    } catch (err) {
+      setIsTricity(null);
+      setTricityMessage('Could not determine service availability.');
+      setTricityWhatsapp(null);
+    } finally {
+      setCheckingTricity(false);
+    }
+  }
+
+  // Load addresses and check tricity on mount
   useEffect(() => {
     loadAddresses();
+    checkTricity();
   }, []);
 
   const loadAddresses = async () => {
@@ -90,7 +124,7 @@ export default function CheckoutScreen() {
     setIsLoadingAddresses(true);
     try {
       const response = await addressService.getAddresses();
-      console.log(response.data, 'this is the get address response');
+      // console.log(response.data, 'this is the get address response');
       if (response.success && response.data) {
         //@ts-ignore
         setAddresses(response.data.addresses);
@@ -230,11 +264,10 @@ export default function CheckoutScreen() {
     setIsLoading(true);
 
     try {
-      console.log('Starting Razorpay order creation');
+      // ... (Razorpay logic unchanged)
       const keyId = 'rzp_test_is54OWfrzNduVS';
       const keySecret = 'd0yFPlL9kW9reLCU3ol2bNeF';
 
-      // Use base64 from 'react-native-base64' for React Native compatibility
       // const auth = base64.encode(`${keyId}:${keySecret}`);
       // let orderRes;
       // try {
@@ -260,15 +293,12 @@ export default function CheckoutScreen() {
       //   return;
       // }
 
-      // console.log('Razorpay order created successfully:', orderRes.data);
-
       // const order = orderRes.data;
       const order = {
         amount: total * 100, // amount in paise, dynamically set
         id: '',
       };
 
-      // 2. Razorpay payment UI
       const options = {
         description: 'Order Payment',
         image: 'https://i.imgur.com/3g7nmJC.jpg',
@@ -285,13 +315,10 @@ export default function CheckoutScreen() {
         theme: { color: '#53a20e' },
       };
 
-      console.log('Opening Razorpay payment UI with options:', options);
-
       try {
         RazorpayCheckout.open(options)
           .then((data) => {
             // handle success
-            // Alert.alert(`Success: ${data.razorpay_payment_id}`);
             const orderData = {
               user_id: user.id,
               total_amount: total,
@@ -309,17 +336,12 @@ export default function CheckoutScreen() {
               })),
             };
 
-            console.log('✅ Final Order Data:');
+            // Place order logic here if needed
           })
           .catch((error) => {
-            // handle failure
             alert(`Error: ${error.code} | ${error.description}`);
           });
-        console.log('Razorpay payment success:');
 
-        // 3. On success, place your order
-
-        // Simulate success screen
         clearCart();
         router.replace('/order-success');
       } catch (error: any) {
@@ -342,6 +364,16 @@ export default function CheckoutScreen() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Open WhatsApp with the given number
+  // Open WhatsApp with the number 9872117945
+  const handleContactOnWhatsapp = () => {
+    const phone = '+919872117945';
+    const url = `https://wa.me/${phone}`;
+    Linking.openURL(url).catch(() => {
+      Alert.alert('Error', 'Could not open WhatsApp');
+    });
   };
 
   const renderAddressCard = (address: Address) => (
@@ -435,6 +467,44 @@ export default function CheckoutScreen() {
           )}
         </View>
 
+        {/* Tricity Service Availability */}
+        <View style={styles.section}>
+          {checkingTricity ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color="#c6aa55" />
+              <Text style={styles.loadingText}>Checking service area...</Text>
+            </View>
+          ) : (
+            <>
+              {isTricity === false ? (
+                <View style={styles.tricityWarningContainer}>
+                  <Text style={styles.tricityWarningText}>
+                    {tricityMessage ||
+                      'Service not available in your area. Please contact us on WhatsApp for queries.'}
+                  </Text>
+                  {tricityWhatsapp && (
+                    <TouchableOpacity
+                      style={styles.contactWhatsappButton}
+                      onPress={handleContactOnWhatsapp}
+                    >
+                      <MessageCircle size={20} color="#fff" />
+                      <Text style={styles.contactWhatsappText}>
+                        Contact us on WhatsApp
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : isTricity === true ? (
+                <View style={styles.tricitySuccessContainer}>
+                  <Text style={styles.tricitySuccessText}>
+                    {tricityMessage || 'Service available in your area.'}
+                  </Text>
+                </View>
+              ) : null}
+            </>
+          )}
+        </View>
+
         {/* Order Summary */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
@@ -464,6 +534,7 @@ export default function CheckoutScreen() {
                   selectedPayment === method.id && styles.paymentMethodSelected,
                 ]}
                 onPress={() => setSelectedPayment(method.id)}
+                disabled={isTricity === false}
               >
                 <View style={styles.paymentMethodLeft}>
                   <View
@@ -518,7 +589,7 @@ export default function CheckoutScreen() {
         </View>
       </ScrollView>
 
-      {/* Price Breakdown & Place Order */}
+      {/* Price Breakdown & Place Order or Contact Us */}
       <View style={styles.footer}>
         <View style={styles.priceBreakdown}>
           <View style={styles.priceRow}>
@@ -539,20 +610,32 @@ export default function CheckoutScreen() {
           </View>
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.placeOrderButton,
-            isLoading && styles.placeOrderButtonDisabled,
-            // Remove disabling style if not needed
-          ]}
-          onPress={handlePlaceOrder}
-          // Only disable if loading, not if !selectedAddress
-          disabled={isLoading}
-        >
-          <Text style={styles.placeOrderText}>
-            {isLoading ? 'Placing Order...' : 'Place Order'}
-          </Text>
-        </TouchableOpacity>
+        {/* If not tricity, show WhatsApp contact, else show Place Order */}
+        {isTricity === false ? (
+          <TouchableOpacity
+            style={styles.contactWhatsappButtonFooter}
+            onPress={handleContactOnWhatsapp}
+            disabled={!tricityWhatsapp}
+          >
+            <MessageCircle size={20} color="#fff" />
+            <Text style={styles.contactWhatsappTextFooter}>
+              Contact us on WhatsApp
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.placeOrderButton,
+              isLoading && styles.placeOrderButtonDisabled,
+            ]}
+            onPress={handlePlaceOrder}
+            disabled={isLoading || isTricity !== true}
+          >
+            <Text style={styles.placeOrderText}>
+              {isLoading ? 'Placing Order...' : 'Place Order'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Add/Edit Address Modal */}
@@ -846,6 +929,52 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
   },
+  tricityWarningContainer: {
+    backgroundColor: '#fff3cd',
+    borderColor: '#ffeeba',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  tricityWarningText: {
+    color: '#856404',
+    fontSize: 15,
+    fontFamily: 'Inter-Medium',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  contactWhatsappButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#25D366',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  contactWhatsappText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Inter-SemiBold',
+    marginLeft: 8,
+  },
+  tricitySuccessContainer: {
+    backgroundColor: '#e6f9e6',
+    borderColor: '#b7e4b7',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 8,
+    alignItems: 'center',
+  },
+  tricitySuccessText: {
+    color: '#2e7d32',
+    fontSize: 15,
+    fontFamily: 'Inter-Medium',
+    textAlign: 'center',
+  },
   orderSummary: {
     backgroundColor: '#f3f3f3',
     padding: 16,
@@ -1020,6 +1149,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: 'Inter-SemiBold',
     color: '#ffffff',
+  },
+  contactWhatsappButtonFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#25D366',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  contactWhatsappTextFooter: {
+    fontSize: 16,
+    fontFamily: 'Inter-SemiBold',
+    color: '#ffffff',
+    marginLeft: 8,
   },
   modalContainer: {
     flex: 1,

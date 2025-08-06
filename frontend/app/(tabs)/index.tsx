@@ -40,6 +40,7 @@ export default function HomeScreen() {
   const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setpage] = useState(2);
 
   useEffect(() => {
     fetchData();
@@ -323,190 +324,195 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
+  const renderListHeader = () => (
+    <>
+      {/* Premium Header */}
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <View style={styles.userSection}>
+            <View style={styles.userAvatar}>
+              <Text style={styles.userInitial}>
+                {user?.name?.charAt(0) || 'U'}
+              </Text>
+            </View>
+            <View>
+              <Text style={styles.greeting}>
+                Hello, {user?.name?.split(' ')[0] || 'User'}!
+              </Text>
+              <Text style={styles.subtitle}>Discover premium products</Text>
+            </View>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.notificationButton}>
+              <Bell size={20} color="#2e3f47" />
+              <View style={styles.notificationDot} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* Premium Search Bar */}
+      <View style={styles.searchContainer}>
+        <TouchableOpacity
+          style={styles.searchBar}
+          onPress={() => router.push('/(tabs)/categories')}
+        >
+          <Search size={20} color="#9b9591" />
+          <Text style={styles.searchPlaceholder}>
+            Search for products, brands...
+          </Text>
+          <View style={styles.searchMic}>
+            <Zap size={16} color="#ffffff" />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* Hero Banner */}
+      {/* ... unchanged ... */}
+
+      {/* Categories Section */}
+      {categories.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Shop by Category</Text>
+              <Text style={styles.sectionSubtitle}>
+                Explore our premium collections
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/categories')}>
+              <Text style={styles.seeAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={categories}
+            renderItem={renderCategory}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesList}
+            keyExtractor={(item) => String(item.id)}
+          />
+        </View>
+      )}
+
+      {/* Featured Products */}
+      {featuredProducts.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Featured Products</Text>
+              <Text style={styles.sectionSubtitle}>Handpicked for you</Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/categories')}>
+              <Text style={styles.seeAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={featuredProducts}
+            renderItem={renderFeaturedProduct}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.featuredList}
+            keyExtractor={(item) => String(item.id)}
+          />
+        </View>
+      )}
+
+      {/* Best Sellers Grid */}
+      {bestSellerProducts.length > 0 && (
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Best Sellers</Text>
+              <Text style={styles.sectionSubtitle}>
+                Most loved by customers
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/categories')}>
+              <Text style={styles.seeAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={bestSellerProducts}
+            renderItem={renderBestSellerProduct}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.bestSellersList}
+            keyExtractor={(item) => String(item.id)}
+          />
+        </View>
+      )}
+    </>
+  );
+
+  // Compose the footer for the FlatList (promo banner, loading, etc.)
+  const renderListFooter = () => (
+    <>
+      {/* Promotional Banner */}
+      <View style={styles.promoBanner}>
+        <View style={styles.promoContent}>
+          <View style={styles.promoIcon}>
+            <Zap size={24} color="#c6aa55" />
+          </View>
+          <View style={styles.promoText}>
+            <Text style={styles.promoTitle}>Free Delivery</Text>
+            <Text style={styles.promoSubtitle}>On orders above ₹2,999</Text>
+          </View>
+        </View>
+        <View style={styles.promoContent}>
+          <View style={styles.promoIcon}>
+            <Award size={24} color="#c6aa55" />
+          </View>
+          <View style={styles.promoText}>
+            <Text style={styles.promoTitle}>Quality Assured</Text>
+            <Text style={styles.promoSubtitle}>Premium products only</Text>
+          </View>
+        </View>
+      </View>
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading amazing products...</Text>
+        </View>
+      )}
+    </>
+  );
+
+  // Only show the all products grid if there are products
+  const showAllProducts = allProducts.length > 0;
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
+      <FlatList
+        data={showAllProducts ? allProducts : []}
+        renderItem={showAllProducts ? renderAllProduct : undefined}
+        keyExtractor={(item) => String(item.id)}
+        numColumns={2}
+        contentContainerStyle={[
+          styles.allProductsList,
+          { paddingTop: 0, paddingBottom: 32 },
+        ]}
+        columnWrapperStyle={{ gap: 16, marginBottom: 16 }}
+        ListHeaderComponent={renderListHeader}
+        ListFooterComponent={renderListFooter}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-      >
-        {/* Premium Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View style={styles.userSection}>
-              <View style={styles.userAvatar}>
-                <Text style={styles.userInitial}>
-                  {user?.name?.charAt(0) || 'U'}
-                </Text>
-              </View>
-              <View>
-                <Text style={styles.greeting}>
-                  Hello, {user?.name?.split(' ')[0] || 'User'}!
-                </Text>
-                <Text style={styles.subtitle}>Discover premium products</Text>
-              </View>
-            </View>
-            <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.notificationButton}>
-                <Bell size={20} color="#2e3f47" />
-                <View style={styles.notificationDot} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {/* Premium Search Bar */}
-        <View style={styles.searchContainer}>
-          <TouchableOpacity
-            style={styles.searchBar}
-            onPress={() => router.push('/(tabs)/categories')}
-          >
-            <Search size={20} color="#9b9591" />
-            <Text style={styles.searchPlaceholder}>
-              Search for products, brands...
-            </Text>
-            <View style={styles.searchMic}>
-              <Zap size={16} color="#ffffff" />
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Hero Banner */}
-        {/* ... unchanged ... */}
-
-        {/* Categories Section */}
-        {categories.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionTitle}>Shop by Category</Text>
-                <Text style={styles.sectionSubtitle}>
-                  Explore our premium collections
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => router.push('/(tabs)/categories')}
-              >
-                <Text style={styles.seeAllText}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={categories}
-              renderItem={renderCategory}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoriesList}
-            />
-          </View>
-        )}
-
-        {/* Featured Products */}
-        {featuredProducts.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionTitle}>Featured Products</Text>
-                <Text style={styles.sectionSubtitle}>Handpicked for you</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => router.push('/(tabs)/categories')}
-              >
-                <Text style={styles.seeAllText}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={featuredProducts}
-              renderItem={renderFeaturedProduct}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.featuredList}
-            />
-          </View>
-        )}
-
-        {/* Best Sellers Grid */}
-        {bestSellerProducts.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionTitle}>Best Sellers</Text>
-                <Text style={styles.sectionSubtitle}>
-                  Most loved by customers
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => router.push('/(tabs)/categories')}
-              >
-                <Text style={styles.seeAllText}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={bestSellerProducts}
-              renderItem={renderBestSellerProduct}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.bestSellersList}
-            />
-          </View>
-        )}
-
-        {/* All Products Grid */}
-        {allProducts.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionTitle}>All Products</Text>
-                <Text style={styles.sectionSubtitle}>
-                  Browse our complete collection
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => router.push('/(tabs)/categories')}
-              >
-                <Text style={styles.seeAllText}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={allProducts}
-              renderItem={renderAllProduct}
-              keyExtractor={(item) => String(item.id)}
-              numColumns={2}
-              scrollEnabled={false}
-              contentContainerStyle={styles.allProductsList}
-              columnWrapperStyle={{ gap: 16, marginBottom: 16 }}
-            />
-          </View>
-        )}
-
-        {/* Promotional Banner */}
-        <View style={styles.promoBanner}>
-          <View style={styles.promoContent}>
-            <View style={styles.promoIcon}>
-              <Zap size={24} color="#c6aa55" />
-            </View>
-            <View style={styles.promoText}>
-              <Text style={styles.promoTitle}>Free Delivery</Text>
-              <Text style={styles.promoSubtitle}>On orders above ₹2,999</Text>
-            </View>
-          </View>
-          <View style={styles.promoContent}>
-            <View style={styles.promoIcon}>
-              <Award size={24} color="#c6aa55" />
-            </View>
-            <View style={styles.promoText}>
-              <Text style={styles.promoTitle}>Quality Assured</Text>
-              <Text style={styles.promoSubtitle}>Premium products only</Text>
-            </View>
-          </View>
-        </View>
-
-        {isLoading && (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>Loading amazing products...</Text>
-          </View>
-        )}
-      </ScrollView>
+        onEndReached={() => {
+          // Your function to run when end is reached
+          console.log('hello');
+        }}
+        onEndReachedThreshold={0.2}
+        // If no products, still show header/footer
+        ListEmptyComponent={
+          !isLoading && (
+            <>
+              {renderListHeader()}
+              {renderListFooter()}
+            </>
+          )
+        }
+      />
     </SafeAreaView>
   );
 }

@@ -113,9 +113,6 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <Text style={styles.title}>Profile</Text>
-            <TouchableOpacity style={styles.editButton}>
-              <Edit size={20} color="#2e3f47" />
-            </TouchableOpacity>
           </View>
         </View>
 
