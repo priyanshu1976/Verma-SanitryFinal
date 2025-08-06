@@ -1,16 +1,43 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Modal,
+  Linking,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowLeft, Shield } from 'lucide-react-native';
+import { ArrowLeft, Shield, Github } from 'lucide-react-native';
+
+const DEVELOPERS = [
+  {
+    name: 'Priyanshu Patel',
+    role: 'Lead Developer & App Architect',
+    photo: require('assets/images/leetcode.png'), // Place your image in assets/devs/nikhil.jpg
+    github: 'https://github.com/priyanshu1976',
+    contribution:
+      'Contributions: Full-stack development, UI/UX, API integration, deployment, and maintenance.',
+    quote: 'Code is like humor. When you have to explain it, it’s bad.',
+  },
+  {
+    name: 'Surya K. Tiwari',
+    role: 'Backend Developer, API Specialist & Database Administrator',
+    photo:
+      'https://avatars.githubusercontent.com/u/139453653?s=400&u=de556ecde6246cfb7989a031fe42fe79181553d4&v=4', // Place your image in assets/devs/aman.jpg
+    github: 'https://github.com/SuryaKTiwari11',
+    contribution:
+      'Contributions: API design, database management, and server deployment.',
+    quote: 'Simplicity is the soul of efficiency.',
+  },
+];
 
 export default function PrivacyPolicyScreen() {
+  const [modalVisible, setModalVisible] = useState(false);
+
   const privacySections = [
     {
       title: 'Information We Collect',
@@ -110,8 +137,57 @@ export default function PrivacyPolicyScreen() {
     </View>
   );
 
+  const handleGithubPress = (url: string) => {
+    Linking.openURL(url);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Developer Info Modal */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.devTitle}>Developer Info</Text>
+            {DEVELOPERS.map((dev, idx) => (
+              <View key={dev.name} style={styles.devCard}>
+                <Image
+                  source={dev.photo}
+                  style={styles.devPhoto}
+                  resizeMode="cover"
+                />
+                <Text style={styles.devName}>{dev.name}</Text>
+                <Text style={styles.devRole}>{dev.role}</Text>
+                <Text style={styles.devContribution}>{dev.contribution}</Text>
+                <Text style={styles.devQuote}>"{dev.quote}"</Text>
+                <View style={styles.socialRow}>
+                  <TouchableOpacity
+                    style={styles.socialButton}
+                    onPress={() => handleGithubPress(dev.github)}
+                  >
+                    <Github size={22} color="#2e3f47" />
+                    <Text style={styles.socialText}>GitHub</Text>
+                  </TouchableOpacity>
+                </View>
+                {idx !== DEVELOPERS.length - 1 && (
+                  <View style={styles.devDivider} />
+                )}
+              </View>
+            ))}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -126,9 +202,13 @@ export default function PrivacyPolicyScreen() {
             <Text style={styles.subtitle}>Last updated: December 2024</Text>
           </View>
         </View>
-        <View style={styles.headerIcon}>
+        <TouchableOpacity
+          style={styles.headerIcon}
+          onPress={() => setModalVisible(true)}
+          activeOpacity={0.7}
+        >
           <Shield size={24} color="#c6aa55" />
-        </View>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -262,6 +342,118 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'Inter-Regular',
     color: '#6b7280',
+    textAlign: 'center',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(44,44,44,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 28,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  devCard: {
+    alignItems: 'center',
+    marginBottom: 18,
+    width: '100%',
+  },
+  devPhoto: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: '#c6aa55',
+    backgroundColor: '#eee',
+  },
+  devTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter-Bold',
+    color: '#2e3f47',
+    marginBottom: 8,
+  },
+  devName: {
+    fontSize: 16,
+    fontFamily: 'Inter-Bold',
+    color: '#c6aa55',
+    marginBottom: 2,
+  },
+  devRole: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: '#6b7280',
+    marginBottom: 10,
+  },
+  devContribution: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: '#2e3f47',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  devQuote: {
+    fontSize: 13,
+    fontFamily: 'Inter-Italic',
+    color: '#9b9591',
+    fontStyle: 'italic',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  devDivider: {
+    width: '80%',
+    height: 1,
+    backgroundColor: '#e5e5e5',
+    marginVertical: 8,
+    alignSelf: 'center',
+  },
+  socialRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 8,
+    gap: 18,
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#f3f3f3',
+    marginHorizontal: 4,
+  },
+  socialText: {
+    fontSize: 13,
+    fontFamily: 'Inter-Regular',
+    color: '#2e3f47',
+    marginLeft: 6,
+  },
+  socialIcon: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginRight: 2,
+  },
+  closeButton: {
+    marginTop: 4,
+    backgroundColor: '#c6aa55',
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontFamily: 'Inter-Bold',
+    fontSize: 14,
     textAlign: 'center',
   },
 });
