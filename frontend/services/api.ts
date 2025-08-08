@@ -12,6 +12,8 @@ import {
 import * as SecureStore from 'expo-secure-store';
 import { base_url } from '@/cred';
 
+console.log('from env');
+
 // Create axios instance with base URL and default headers
 const API_BASE_URL = process.env.API_BASE_URL || base_url;
 

@@ -77,9 +77,10 @@ export default function AdminOrdersScreen() {
   const fetchOrders = async () => {
     try {
       const response = await orderService.getAllOrders();
-      console.log(response);
+
       if (response.success) {
-        setOrders(response.data || []);
+        //@ts-ignore
+        setOrders(response.data.orders || []);
       }
     } catch (error) {
       console.error('Error fetching orders:', error);

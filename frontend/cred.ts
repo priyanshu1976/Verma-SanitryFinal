@@ -1,1 +1,1 @@
-export const base_url = 'http://172.16.214.171:3000';
+export const base_url = 'https://sanitaryshop-backend-2.onrender.com';

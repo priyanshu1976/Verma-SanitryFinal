@@ -56,6 +56,7 @@ export default function AdminDashboardScreen() {
       let totalUsers = 0;
 
       if (ordersResponse.success) {
+        console.log(ordersResponse.data);
         const orders = ordersResponse.data || [];
         totalRevenue = orders.reduce(
           (sum, order) => sum + order.total_amount,
@@ -135,6 +136,17 @@ export default function AdminDashboardScreen() {
     }
   };
 
+  // Helper to get a short order id string
+  const getShortOrderId = (id: any) => {
+    if (typeof id === 'string') {
+      return id.substring(0, 5);
+    }
+    if (typeof id === 'number') {
+      return id.toString().substring(0, 5);
+    }
+    return '-----';
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -204,7 +216,7 @@ export default function AdminDashboardScreen() {
                 >
                   <View style={styles.orderInfo}>
                     <Text style={styles.orderNumber}>
-                      #{order.id.slice(-6)}
+                      #{getShortOrderId(order.id)}
                     </Text>
                     <Text style={styles.customerName}>
                       {order.user?.name || 'Unknown User'}
